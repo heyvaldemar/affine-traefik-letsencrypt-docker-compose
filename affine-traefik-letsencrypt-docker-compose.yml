@@ -1,0 +1,269 @@
+# Affine with Let's Encrypt Using Docker Compose
+
+# The complete installation guide is available on my website https://www.heyvaldemar.com/install-affine-using-docker-compose/
+
+# Change variables in the `.env` to meet your requirements.
+# Note that the `.env` file should be in the same directory as `affine-traefik-letsencrypt-docker-compose.yml`.
+
+# Create networks for your services before deploying the configuration using the commands:
+# `docker network create traefik-network`
+# `docker network create affine-network`
+
+# Deploy Affine using Docker Compose:
+# `docker compose -f affine-traefik-letsencrypt-docker-compose.yml -p affine up -d`
+
+# Backups
+# The `backups` container in the configuration is responsible for the following:
+# 1. **Database Backup**: Creates compressed backups of the PostgreSQL database using pg_dump.
+# Customizable backup path, filename pattern, and schedule through variables like `POSTGRES_BACKUPS_PATH`, `POSTGRES_BACKUP_NAME`, and `BACKUP_INTERVAL`.
+# 2. **Application Data Backup**: Compresses and stores backups of the application data on the same schedule. Controlled via variables such as `DATA_BACKUPS_PATH`, `DATA_BACKUP_NAME`, and `BACKUP_INTERVAL`.
+# 3. **Backup Pruning**: Periodically removes backups exceeding a specified age to manage storage.
+# Customizable pruning schedule and age threshold with `POSTGRES_BACKUP_PRUNE_DAYS` and `DATA_BACKUP_PRUNE_DAYS`.
+# By utilizing this container, consistent and automated backups of the essential components of your instance are ensured.
+# Moreover, efficient management of backup storage and tailored backup routines can be achieved through easy and flexible configuration using environment variables.
+
+# # affine-restore-database.sh Description
+# This script facilitates the restoration of a database backup.
+# 1. **Identify Containers**: It first identifies the service and backups containers by name, finding the appropriate container IDs.
+# 2. **List Backups**: Displays all available database backups located at the specified backup path.
+# 3. **Select Backup**: Prompts the user to copy and paste the desired backup name from the list to restore the database.
+# 4. **Stop Service**: Temporarily stops the service to ensure data consistency during restoration.
+# 5. **Restore Database**: Executes a sequence of commands to drop the current database, create a new one, and restore it from the selected compressed backup file.
+# 6. **Start Service**: Restarts the service after the restoration is completed.
+# To make the `affine-restore-database.shh` script executable, run the following command:
+# `chmod +x affine-restore-database.sh`
+# Usage of this script ensures a controlled and guided process to restore the database from an existing backup.
+
+# # affine-restore-application-data.sh Description
+# This script is designed to restore the application data.
+# 1. **Identify Containers**: Similarly to the database restore script, it identifies the service and backups containers by name.
+# 2. **List Application Data Backups**: Displays all available application data backups at the specified backup path.
+# 3. **Select Backup**: Asks the user to copy and paste the desired backup name for application data restoration.
+# 4. **Stop Service**: Stops the service to prevent any conflicts during the restore process.
+# 5. **Restore Application Data**: Removes the current application data and then extracts the selected backup to the appropriate application data path.
+# 6. **Start Service**: Restarts the service after the application data has been successfully restored.
+# To make the `affine-restore-application-data.sh` script executable, run the following command:
+# `chmod +x affine-restore-application-data.sh`
+# By utilizing this script, you can efficiently restore application data from an existing backup while ensuring proper coordination with the running service.
+
+# Author
+# I’m Vladimir Mikhalev, the Docker Captain, but my friends can call me Valdemar.
+# https://www.docker.com/captains/vladimir-mikhalev/
+
+# My website with detailed IT guides: https://www.heyvaldemar.com/
+# Follow me on YouTube: https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1
+# Follow me on Twitter: https://twitter.com/heyValdemar
+# Follow me on Instagram: https://www.instagram.com/heyvaldemar/
+# Follow me on Threads: https://www.threads.net/@heyvaldemar
+# Follow me on Mastodon: https://mastodon.social/@heyvaldemar
+# Follow me on Bluesky: https://bsky.app/profile/heyvaldemar.bsky.social
+# Follow me on Facebook: https://www.facebook.com/heyValdemarFB/
+# Follow me on TikTok: https://www.tiktok.com/@heyvaldemar
+# Follow me on LinkedIn: https://www.linkedin.com/in/heyvaldemar/
+# Follow me on GitHub: https://github.com/heyvaldemar
+
+# Communication
+# Chat with IT pros on Discord: https://discord.gg/AJQGCCBcqf
+# Reach me at ask@sre.gg
+
+# Give Thanks
+# Support on GitHub: https://github.com/sponsors/heyValdemar
+# Support on Patreon: https://www.patreon.com/heyValdemar
+# Support on BuyMeaCoffee: https://www.buymeacoffee.com/heyValdemar
+# Support on Ko-fi: https://ko-fi.com/heyValdemar
+# Support on PayPal: https://www.paypal.com/paypalme/heyValdemarCOM
+
+networks:
+  affine-network:
+    external: true
+  traefik-network:
+    external: true
+
+volumes:
+  affine-data:
+  affine-config:
+  redis-data:
+  affine-postgres:
+  affine-postgres-backup:
+  affine-data-backups:
+  affine-database-backups:
+  traefik-certificates:
+
+services:
+  postgres:
+    image: ${AFFINE_POSTGRES_IMAGE_TAG}
+    volumes:
+      - affine-postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${AFFINE_DB_NAME}
+      POSTGRES_USER: ${AFFINE_DB_USER}
+      POSTGRES_PASSWORD: ${AFFINE_DB_PASSWORD}
+    networks:
+      - affine-network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${AFFINE_DB_NAME}", "-U", "${AFFINE_DB_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  redis:
+    image: ${AFFINE_REDIS_IMAGE_TAG}
+    command: ["redis-server", "--requirepass", "$AFFINE_REDIS_PASSWORD"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - affine-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  affine:
+    image: ${AFFINE_IMAGE_TAG}
+    command: ['sh', '-c', 'node ./scripts/self-host-predeploy && node ./dist/index.js']
+    volumes:
+      - affine-data:/root/.affine/storage
+      - affine-config:/root/.affine/config
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: "--import=./scripts/register.js"
+      AFFINE_CONFIG_PATH: /root/.affine/config
+      DATABASE_URL: postgres://${AFFINE_DB_USER}:${AFFINE_DB_PASSWORD}@postgres:5432/${AFFINE_DB_NAME}
+      REDIS_SERVER_HOST: redis
+      REDIS_SERVER_PORT: 6379
+      REDIS_SERVER_PASSWORD: ${AFFINE_REDIS_PASSWORD}
+      AFFINE_SERVER_EXTERNAL_URL: ${AFFINE_URL}
+      AFFINE_SERVER_HOST: ${AFFINE_HOSTNAME}
+      AFFINE_SERVER_HTTPS: 'false'
+      MAILER_HOST: ${AFFINE_SMTP_ADDRESS}
+      MAILER_PORT: ${AFFINE_SMTP_PORT}
+      MAILER_USER: ${AFFINE_SMTP_USER_NAME}
+      MAILER_PASSWORD: ${AFFINE_SMTP_PASSWORD}
+      MAILER_SENDER: ${AFFINE_EMAIL_FROM}
+      TELEMETRY_ENABLE: 'false'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1000m'
+    networks:
+      - affine-network
+      - traefik-network
+    healthcheck:
+      test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/3010' || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.affine.rule=Host(`${AFFINE_HOSTNAME}`)"
+      - "traefik.http.routers.affine.service=affine"
+      - "traefik.http.routers.affine.entrypoints=websecure"
+      - "traefik.http.services.affine.loadbalancer.server.port=3010"
+      - "traefik.http.routers.affine.tls=true"
+      - "traefik.http.routers.affine.tls.certresolver=letsencrypt"
+      - "traefik.http.services.affine.loadbalancer.passhostheader=true"
+      - "traefik.http.routers.affine.middlewares=compresstraefik"
+      - "traefik.http.middlewares.compresstraefik.compress=true"
+      - "traefik.docker.network=traefik-network"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      traefik:
+        condition: service_healthy
+
+  traefik:
+    image: ${TRAEFIK_IMAGE_TAG}
+    command:
+      - "--log.level=${TRAEFIK_LOG_LEVEL}"
+      - "--accesslog=true"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--ping=true"
+      - "--ping.entrypoint=ping"
+      - "--entryPoints.ping.address=:8082"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--providers.docker=true"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.exposedByDefault=false"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      - "--global.checkNewVersion=true"
+      - "--global.sendAnonymousUsage=false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - traefik-certificates:/etc/traefik/acme
+    networks:
+      - traefik-network
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:8082/ping","--spider"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard.loadbalancer.passhostheader=true"
+      - "traefik.http.routers.dashboard.middlewares=authtraefik"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    restart: unless-stopped
+
+  backups:
+    image: ${AFFINE_POSTGRES_IMAGE_TAG}
+    command: >-
+      sh -c 'sleep $BACKUP_INIT_SLEEP &&
+      while true; do
+        pg_dump -h postgres -p 5432 -d $AFFINE_DB_NAME -U $AFFINE_DB_USER | gzip > $POSTGRES_BACKUPS_PATH/$POSTGRES_BACKUP_NAME-$(date "+%Y-%m-%d_%H-%M").gz &&
+        tar -zcpf $DATA_BACKUPS_PATH/$DATA_BACKUP_NAME-$(date "+%Y-%m-%d_%H-%M").tar.gz $DATA_PATH &&
+        find $POSTGRES_BACKUPS_PATH -type f -mtime +$POSTGRES_BACKUP_PRUNE_DAYS | xargs rm -f &&
+        find $DATA_BACKUPS_PATH -type f -mtime +$DATA_BACKUP_PRUNE_DAYS | xargs rm -f;
+        sleep $BACKUP_INTERVAL; done'
+    volumes:
+      - affine-postgres-backup:/var/lib/postgresql/data
+      - affine-data:${DATA_PATH}
+      - affine-data-backups:${DATA_BACKUPS_PATH}
+      - affine-database-backups:${POSTGRES_BACKUPS_PATH}
+    environment:
+      AFFINE_DB_NAME: ${AFFINE_DB_NAME}
+      AFFINE_DB_USER: ${AFFINE_DB_USER}
+      PGPASSWORD: ${AFFINE_DB_PASSWORD}
+      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL}
+      POSTGRES_BACKUP_PRUNE_DAYS: ${POSTGRES_BACKUP_PRUNE_DAYS}
+      DATA_BACKUP_PRUNE_DAYS: ${DATA_BACKUP_PRUNE_DAYS}
+      POSTGRES_BACKUPS_PATH: ${POSTGRES_BACKUPS_PATH}
+      DATA_BACKUPS_PATH: ${DATA_BACKUPS_PATH}
+      DATA_PATH: ${DATA_PATH}
+      POSTGRES_BACKUP_NAME: ${POSTGRES_BACKUP_NAME}
+      DATA_BACKUP_NAME: ${DATA_BACKUP_NAME}
+    networks:
+      - affine-network
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
