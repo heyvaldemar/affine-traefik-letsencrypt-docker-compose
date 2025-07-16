@@ -17,6 +17,7 @@ volumes:
 services:
   postgres:
     image: ${AFFINE_POSTGRES_IMAGE_TAG}
+    container_name: affine_postgres
     volumes:
       - affine-postgres:/var/lib/postgresql/data
     environment:
@@ -35,28 +36,53 @@ services:
 
   redis:
     image: ${AFFINE_REDIS_IMAGE_TAG}
+    container_name: affine_redis
     command: ["redis-server", "--requirepass", "$AFFINE_REDIS_PASSWORD"]
     volumes:
       - redis-data:/data
     networks:
       - affine-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "$AFFINE_REDIS_PASSWORD", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 60s
     restart: unless-stopped
 
-  affine:
+  affine_migration:
     image: ${AFFINE_IMAGE_TAG}
-    command: ['sh', '-c', 'node ./scripts/self-host-predeploy && node ./dist/index.js']
+    container_name: affine_migration_job
     volumes:
       - affine-data:/root/.affine/storage
       - affine-config:/root/.affine/config
     environment:
       NODE_ENV: production
-      NODE_OPTIONS: "--import=./scripts/register.js"
+      AFFINE_CONFIG_PATH: /root/.affine/config
+      DATABASE_URL: postgres://${AFFINE_DB_USER}:${AFFINE_DB_PASSWORD}@postgres:5432/${AFFINE_DB_NAME}
+      REDIS_SERVER_HOST: redis
+      REDIS_SERVER_PORT: 6379
+      REDIS_SERVER_PASSWORD: ${AFFINE_REDIS_PASSWORD}
+      AFFINE_SERVER_EXTERNAL_URL: ${AFFINE_URL}
+      AFFINE_SERVER_HOST: ${AFFINE_HOSTNAME}
+      AFFINE_SERVER_HTTPS: 'false'
+    command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - affine-network
+
+  affine:
+    image: ${AFFINE_IMAGE_TAG}
+    container_name: affine_server
+    volumes:
+      - affine-data:/root/.affine/storage
+      - affine-config:/root/.affine/config
+    environment:
+      NODE_ENV: production
       AFFINE_CONFIG_PATH: /root/.affine/config
       DATABASE_URL: postgres://${AFFINE_DB_USER}:${AFFINE_DB_PASSWORD}@postgres:5432/${AFFINE_DB_NAME}
       REDIS_SERVER_HOST: redis
@@ -85,27 +111,16 @@ services:
       retries: 3
       start_period: 90s
     labels:
-      # Enable Traefik for this container
       - "traefik.enable=true"
-      # Match incoming requests on a specific hostname
       - "traefik.http.routers.affine.rule=Host(`${AFFINE_HOSTNAME}`)"
-      # Assign the router to a named Traefik service
       - "traefik.http.routers.affine.service=affine"
-      # Use the 'websecure' (HTTPS) entry point
       - "traefik.http.routers.affine.entrypoints=websecure"
-      # Define the internal container port for routing
       - "traefik.http.services.affine.loadbalancer.server.port=3010"
-      # Enable TLS on this router
       - "traefik.http.routers.affine.tls=true"
-      # Use Let's Encrypt for certificate management
       - "traefik.http.routers.affine.tls.certresolver=letsencrypt"
-      # Pass the original Host header to the container
       - "traefik.http.services.affine.loadbalancer.passhostheader=true"
-      # Apply a compression middleware
       - "traefik.http.routers.affine.middlewares=compresstraefik"
-      # Define settings for the compression middleware
       - "traefik.http.middlewares.compresstraefik.compress=true"
-      # Specify which Docker network Traefik should use for routing
       - "traefik.docker.network=traefik-network"
     restart: unless-stopped
     depends_on:
@@ -113,48 +128,33 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      affine_migration:
+        condition: service_completed_successfully
       traefik:
         condition: service_healthy
 
   traefik:
     image: ${TRAEFIK_IMAGE_TAG}
+    container_name: affine_traefik
     command:
-      # Set the log level (DEBUG, INFO, WARN, ERROR)
       - "--log.level=${TRAEFIK_LOG_LEVEL}"
-      # Enable the built-in API and web-based dashboard
       - "--api.dashboard=true"
-      # Enable the /ping endpoint so we can health-check Traefik
       - "--ping=true"
-      # Assign the /ping endpoint to a dedicated entry point on port 8082
       - "--ping.entrypoint=ping"
       - "--entrypoints.ping.address=:8082"
-      # Define the primary HTTP entry point on port 80
       - "--entrypoints.web.address=:80"
-      # Define the secure (HTTPS) entry point on port 443
       - "--entrypoints.websecure.address=:443"
-      # HTTP -> HTTPS redirect at entrypoint level
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      # Enable the Docker provider to detect containers and their labels
       - "--providers.docker=true"
-      # Point Traefik to the Docker socket
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
-      # Prevent automatic exposure of all containers; only expose containers
-      # with "traefik.enable=true"
       - "--providers.docker.exposedbydefault=false"
-      # Use ACME (Let's Encrypt) to generate/renew certificates via TLS challenge
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      # The email address used by Let's Encrypt for renewal notices
       - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
-      # The file where ACME certificates are stored inside the container
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
-      # Enable Prometheus metrics
       - "--metrics.prometheus=true"
-      # Configure Prometheus histogram buckets
       - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
-      # Check for newer Traefik versions and optionally log that info
       - "--global.checknewversion=true"
-      # Disable sending anonymous usage data to the Traefik maintainers
       - "--global.sendanonymoususage=false"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -171,25 +171,21 @@ services:
       retries: 3
       start_period: 5s
     labels:
-      # Enable Traefik for this container
       - "traefik.enable=true"
-      # A router to expose the Traefik dashboard
       - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
-      # Basic Authentication for the Traefik dashboard
       - "traefik.http.routers.dashboard.middlewares=authtraefik"
       - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH}"
-      # Specify the internal server port to the dashboard service
       - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
-      # Pass the original Host header to the backend
       - "traefik.http.services.dashboard.loadbalancer.passhostheader=true"
     restart: unless-stopped
 
   backups:
     image: ${AFFINE_POSTGRES_IMAGE_TAG}
+    container_name: affine_backups
     command: >-
       sh -c 'sleep $BACKUP_INIT_SLEEP &&
       while true; do
