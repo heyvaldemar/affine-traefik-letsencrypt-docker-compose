@@ -16,7 +16,6 @@ AFFINE_CONTAINER=$(docker ps -aqf "name=affine-affine")
 AFFINE_BACKUPS_CONTAINER=$(docker ps -aqf "name=affine-backups")
 AFFINE_DB_NAME="affinedb"
 AFFINE_DB_USER="affinedbuser"
-POSTGRES_PASSWORD=$(docker exec $AFFINE_BACKUPS_CONTAINER printenv PGPASSWORD)
 BACKUP_PATH="/srv/affine-postgres/backups/"
 
 echo "--> All available database backups:"
@@ -30,7 +29,7 @@ echo "--> Copy and paste the backup name from the list above to restore database
 --> Example: affine-postgres-backup-YYYY-MM-DD_hh-mm.gz"
 echo -n "--> "
 
-read SELECTED_DATABASE_BACKUP
+read -r SELECTED_DATABASE_BACKUP
 
 echo "--> $SELECTED_DATABASE_BACKUP was selected"
 
