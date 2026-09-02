@@ -132,6 +132,8 @@ CI runs on every push, pull request, and every Monday at 06:00 UTC. GitHub Actio
 
 The `backups` container performs a dump → archive → prune → sleep loop: `pg_dump | gzip` of the AFFiNE database, `tar.gz` of the workspace storage, pruning by retention windows, then sleeping `BACKUP_INTERVAL` (default 24h).
 
+Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup — grep the log for `FAILED` from your monitoring.
+
 **Verify backups are running:**
 
 ```bash
