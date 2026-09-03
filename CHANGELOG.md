@@ -51,7 +51,7 @@ _(no unreleased changes yet)_
 
 ### Added
 
-- **`tests/e2e-backup-restore.sh`** — seven end-to-end scenarios against
+- **`tests/e2e-backup-restore.sh`**: seven end-to-end scenarios against
   the live stack, run by CI on every push and by you locally: the
   required-variable guard fires, a backup is produced, it is a readable
   archive with real dump content (and a readable data `tar.gz` where the
@@ -87,13 +87,13 @@ v1.2.0.
 
 ### Security
 
-- **AFFiNE pinned by digest** (`stable@sha256:…` — the floating `stable`
+- **AFFiNE pinned by digest** (`stable@sha256:…`, the floating `stable`
   tag alone made deployments unreproducible; the weekly digest-drift check
   now tracks upstream releases). **Traefik bumped 3.2 → 3.7** (3.2's
   Docker client cannot talk to Docker Engine 29). **Redis 7.2 → 7.4**,
   `postgres:16` digest-pinned.
 - **Credentials untracked from git.** The tracked `.env` carried
-  generated-looking database/Redis passwords published on GitHub — rotate
+  generated-looking database/Redis passwords published on GitHub. Rotate
   them if reused. `.env` is now gitignored; compose fails fast on unset
   values. SMTP credentials are now optional/empty by default.
 
@@ -108,7 +108,7 @@ v1.2.0.
 
 - **Deployment Verification workflow**: shellcheck + actionlint; Trivy
   scans of all four pinned images; weekly `check-pin-freshness` (digest
-  drift — the version tracker for the `stable` pin — plus Traefik release
+  drift (the version tracker for the `stable` pin) plus Traefik release
   lag); deploy-and-test that boots the full stack with ephemeral
   credentials and requires the front page to answer 200 through Traefik.
 

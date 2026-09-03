@@ -1,4 +1,4 @@
-# AFFiNE + Traefik + Let's Encrypt — Docker Compose
+# AFFiNE + Traefik + Let's Encrypt on Docker Compose
 
 [![Deployment Verification](https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -40,7 +40,7 @@ Five moving parts (Traefik + AFFiNE + migration job + Postgres + Redis, plus the
 
 - **A Linux server** with a public IP. Tested on Ubuntu 22.04 LTS+ and Debian 12+.
 - **Docker Engine 24+ and Docker Compose 2.20+.**
-- **A domain you control,** with two `A` records pointing at your server's public IP — one for AFFiNE, one for the Traefik dashboard. DNS must propagate before deploy.
+- **A domain you control,** with two `A` records pointing at your server's public IP: one for AFFiNE, one for the Traefik dashboard. DNS must propagate before deploy.
 - **Ports 80 and 443 open** on the server's firewall.
 - **~1.5 GB free RAM** for the running stack, plus disk for workspace data and backups.
 
@@ -65,7 +65,7 @@ $EDITOR .env
 docker compose -f affine-traefik-letsencrypt-docker-compose.yml -p affine up -d
 ```
 
-The migration job prepares the database, then the server starts — within a couple of minutes `https://${AFFINE_HOSTNAME}` serves AFFiNE with a fresh Let's Encrypt certificate. The first registered account becomes the workspace owner; create yours before sharing the URL.
+The migration job prepares the database, then the server starts. Within a couple of minutes `https://${AFFINE_HOSTNAME}` serves AFFiNE with a fresh Let's Encrypt certificate. The first registered account becomes the workspace owner; create yours before sharing the URL.
 
 ### What success looks like
 
@@ -99,40 +99,40 @@ docker compose -f affine-traefik-letsencrypt-docker-compose.yml -p affine up -d 
 
 ## Features
 
-- **AFFiNE stable** — docs, edgeless whiteboards, databases; local-first sync with the server.
+- **AFFiNE stable**: docs, edgeless whiteboards, databases; local-first sync with the server.
 - **PostgreSQL + Redis** with healthchecks and start-order dependencies; a dedicated migration job runs schema upgrades before the server starts.
 - **Traefik v3** with automatic HTTP→HTTPS redirect and Let's Encrypt TLS-ALPN certificate issuance.
 - **Basic-auth protected Traefik dashboard** on a separate hostname.
 - **Scheduled backups** of the database (`pg_dump | gzip`) and workspace data (`tar.gz`) with retention pruning, plus restore scripts for both.
-- **Optional SMTP** for invites/notifications — empty by default.
-- **Credentials required at deploy time** — compose fails fast if `.env` is incomplete.
+- **Optional SMTP** for invites/notifications, empty by default.
+- **Credentials required at deploy time**: compose fails fast if `.env` is incomplete.
 
 ## Supply chain trust
 
 This repository is a **deployment template**, not a custom Docker image. It orchestrates four upstream images:
 
-- [`traefik`](https://hub.docker.com/_/traefik) — reverse proxy, Docker Hub official image
-- [`ghcr.io/toeverything/affine`](https://github.com/toeverything/AFFiNE/pkgs/container/affine) — AFFiNE upstream
-- [`postgres`](https://hub.docker.com/_/postgres) / [`redis`](https://hub.docker.com/_/redis) — Docker Hub official images
+- [`traefik`](https://hub.docker.com/_/traefik): reverse proxy, Docker Hub official image
+- [`ghcr.io/toeverything/affine`](https://github.com/toeverything/AFFiNE/pkgs/container/affine): AFFiNE upstream
+- [`postgres`](https://hub.docker.com/_/postgres) / [`redis`](https://hub.docker.com/_/redis): Docker Hub official images
 
-All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. AFFiNE publishes its releases by moving the `stable` tag, so the pin is `stable@digest` — reproducible today, and the weekly digest-drift check fires whenever upstream releases, prompting a reviewed bump. `git pull` alone delivers the tested combination; an `*_IMAGE_TAG` variable in `.env` overrides deliberately.
+All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. AFFiNE publishes its releases by moving the `stable` tag, so the pin is `stable@digest`, reproducible today, and the weekly digest-drift check fires whenever upstream releases, prompting a reviewed bump. `git pull` alone delivers the tested combination; an `*_IMAGE_TAG` variable in `.env` overrides deliberately.
 
 CI runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot keeps those fresh.
 
 ## Production checklist
 
-- [ ] **Register the owner account immediately after deploy** — first sign-up wins.
+- [ ] **Register the owner account immediately after deploy**: first sign-up wins.
 - [ ] **Strong secrets.** `AFFINE_DB_PASSWORD` and `AFFINE_REDIS_PASSWORD` at 24+ random characters; regenerate the Traefik dashboard BCrypt hash per deployment.
 - [ ] **Host-mount the backup volumes** for disaster recovery.
 - [ ] **Verify Let's Encrypt cert issuance** in the Traefik logs on first start.
-- [ ] **Back up before upgrades** — the migration job upgrades the schema forward; the way back is a restore.
+- [ ] **Back up before upgrades**: the migration job upgrades the schema forward; the way back is a restore.
 - [ ] **Know the restore procedure.** Run both restore scripts against a test environment before you need them.
 
 ## Backups
 
 The `backups` container performs a dump → archive → prune → sleep loop: `pg_dump | gzip` of the AFFiNE database, `tar.gz` of the workspace storage, pruning by retention windows, then sleeping `BACKUP_INTERVAL` (default 24h).
 
-Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup — grep the log for `FAILED` from your monitoring.
+Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup. Grep the log for `FAILED` from your monitoring.
 
 **Verify backups are running:**
 
@@ -144,7 +144,7 @@ docker compose -p affine logs backups | tail -5
 
 ## Resource limits
 
-Every service carries memory and CPU limits plus reservations as compose-level defaults — the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`, e.g. `TRAEFIK_MEMORY_LIMIT=512m`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
+Every service carries memory and CPU limits plus reservations as compose-level defaults: the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`, e.g. `TRAEFIK_MEMORY_LIMIT=512m`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
 
 ## Container hardening
 
@@ -154,23 +154,23 @@ Every service runs with `security_opt: no-new-privileges:true`, so a process can
 
 The [Deployment Verification](https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and every day at 06:00 UTC:
 
-1. **Lint** — shellcheck on both restore scripts, actionlint on the workflow.
+1. **Lint**: shellcheck on both restore scripts, actionlint on the workflow.
 2. **Trivy scans** of all four pinned images (CRITICAL/HIGH, SARIF to the Security tab).
-3. **Pin freshness** (daily/manual) — digest drift (the release tracker for the `stable` pin) plus Traefik release lag.
-4. **Deploy-and-test** — boots the full stack with ephemeral credentials, waits through the migration job, and requires the front page to answer 200 through Traefik.
+3. **Pin freshness** (daily/manual): digest drift (the release tracker for the `stable` pin) plus Traefik release lag.
+4. **Deploy-and-test**: boots the full stack with ephemeral credentials, waits through the migration job, and requires the front page to answer 200 through Traefik.
 
 A green run is the authoritative proof that the template deploys end-to-end and that its backups restore.
 
 ### Backup and restore, proven
 
-`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone — a backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
+`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone. A backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
 
 ```bash
 chmod +x tests/e2e-backup-restore.sh
 ./tests/e2e-backup-restore.sh
 ```
 
-It stops the database container briefly to prove failure detection — run it on a staging copy, not on production.
+It stops the database container briefly to prove failure detection. Run it on a staging copy, not on production.
 
 ## Security Notes
 
@@ -185,7 +185,7 @@ It stops the database container briefly to prove failure detection — run it on
 
 <div align="center">
 
-**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** — Docker Captain · IBM Champion · AWS Community Builder
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** · Docker Captain · IBM Champion · AWS Community Builder
 
 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
