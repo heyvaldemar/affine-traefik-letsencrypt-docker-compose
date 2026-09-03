@@ -72,7 +72,7 @@ _(no unreleased changes yet)_
   required-variable guard fires, a backup is produced, it is a readable
   archive with real dump content (and a readable data `tar.gz` where the
   stack has one), a database outage is reported as `FAILED`, **restore
-  genuinely replaces database state** (a marker row inserted after the
+ replaces database state** (a marker row inserted after the
   baseline backup is gone after restoring it), and pruning removes only
   old files.
 
@@ -105,8 +105,8 @@ v1.2.0.
 
 - **AFFiNE pinned by digest** (`stable@sha256:…`, the floating `stable`
   tag alone made deployments unreproducible; the weekly digest-drift check
-  now tracks upstream releases). **Traefik bumped 3.2 → 3.7** (3.2's
-  Docker client cannot talk to Docker Engine 29). **Redis 7.2 → 7.4**,
+  now tracks upstream releases). Traefik bumped 3.2 → 3.7 (3.2's
+  Docker client cannot talk to Docker Engine 29). Redis 7.2 → 7.4,
   `postgres:16` digest-pinned.
 - **Credentials untracked from git.** The tracked `.env` carried
   generated-looking database/Redis passwords published on GitHub. Rotate

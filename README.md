@@ -16,7 +16,7 @@
 - [Security Notes](#security-notes)
 - [About the maintainer](#about-the-maintainer)
 
-This repository deploys **AFFiNE** (the open-source knowledge base: docs + whiteboards + databases) behind **Traefik** with automatic **Let's Encrypt TLS**, backed by **PostgreSQL** and **Redis**, with a migration job, scheduled **backups** (database + application data), and companion **restore scripts**. One `docker compose up` away from a self-hosted workspace at `https://your-domain`.
+This repository deploys AFFiNE (the open-source knowledge base: docs + whiteboards + databases) behind Traefik with automatic Let's Encrypt TLS, backed by PostgreSQL and Redis, with a migration job, scheduled backups (database + application data), and companion restore scripts. One `docker compose up` away from a self-hosted workspace at `https://your-domain`.
 
 📙 Full narrative installation guide on the blog: [heyvaldemar.com/install-affine-using-docker-compose/](https://www.heyvaldemar.com/install-affine-using-docker-compose/).
 
@@ -109,7 +109,7 @@ docker compose -f affine-traefik-letsencrypt-docker-compose.yml -p affine up -d 
 
 ## Supply chain trust
 
-This repository is a **deployment template**, not a custom Docker image. It orchestrates four upstream images:
+This repository is a deployment template, not a custom Docker image. It orchestrates four upstream images:
 
 - [`traefik`](https://hub.docker.com/_/traefik): reverse proxy, Docker Hub official image
 - [`ghcr.io/toeverything/affine`](https://github.com/toeverything/AFFiNE/pkgs/container/affine): AFFiNE upstream
@@ -174,7 +174,7 @@ chmod +x tests/e2e-backup-restore.sh
 
 It stops the database container briefly to prove failure detection. Run it on a staging copy, not on production.
 
-## Security Notes
+## Security notes
 
 - Credentials are read from `.env` at deploy time; `.env` is gitignored and compose fails fast on missing required variables.
 - **Pre-rotation advisory.** Releases before v1.0.0 (2026-08-31) shipped a tracked `.env` with generated-looking database and Redis passwords. Rotate them if your deployment reused them.
