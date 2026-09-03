@@ -117,6 +117,8 @@ This repository is a **deployment template**, not a custom Docker image. It orch
 
 All four are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. AFFiNE publishes its releases by moving the `stable` tag, so the pin is `stable@digest`, reproducible today, and the weekly digest-drift check fires whenever upstream releases, prompting a reviewed bump. `git pull` alone delivers the tested combination; an `*_IMAGE_TAG` variable in `.env` overrides deliberately.
 
+Two override levels exist per image. `<PREFIX>_IMAGE_VERSION` in `.env` swaps only the version of that image (Compose then pulls the tag, without a digest) and leaves every other pin as tested; `<PREFIX>_IMAGE_TAG` replaces the whole reference, digest included. The variable names are listed in `.env.example`. Nested defaults need Docker Compose v2.5 or newer (2022); v2.0 to v2.4 leave the inner `${...}` unexpanded and `docker compose up` fails with an invalid reference instead of deploying something unexpected.
+
 CI runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot keeps those fresh.
 
 ## Production checklist
