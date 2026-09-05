@@ -127,6 +127,23 @@ services:
   affine_migration:
     image: *affine-image
     container_name: affine_migration_job
+    # Hardening: no privilege escalation via setuid binaries. This service was
+    # missed when the rest of the file was hardened - a one-shot job that runs
+    # a database migration and exits, so it never showed up in a container
+    # listing afterwards to be noticed. It reads and writes the same volumes
+    # as the server does.
+    security_opt:
+      - no-new-privileges:true
+    # Resource limits as .env-overridable defaults (e.g. AFFINE_MIGRATION_MEMORY_LIMIT=2g);
+    # the override survives every git pull.
+    deploy:
+      resources:
+        limits:
+          memory: ${AFFINE_MIGRATION_MEMORY_LIMIT:-1g}
+          cpus: "${AFFINE_MIGRATION_CPU_LIMIT:-1.0}"
+        reservations:
+          memory: ${AFFINE_MIGRATION_MEMORY_RESERVATION:-128m}
+          cpus: "${AFFINE_MIGRATION_CPU_RESERVATION:-0.25}"
     volumes:
       - affine-data:/root/.affine/storage
       - affine-config:/root/.affine/config
