@@ -165,6 +165,9 @@ services:
         condition: service_healthy
     networks:
       - affine-network
+    # A one-shot job: it runs the migration once and exits, and the server
+    # waits for it to complete. Written out so the absence is a decision.
+    restart: "no"
 
   affine:
     image: *affine-image

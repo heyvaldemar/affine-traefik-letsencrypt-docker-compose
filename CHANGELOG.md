@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The migration job says it does not restart.** It never did - Compose's default is not to - but the fleet now requires every service to state its restart policy, so that a one-shot job is told apart from a long-running service somebody forgot.
 - **The freshness check has its own workflow, Pin Freshness.** It ran inside Deployment Verification, whose badge is the one at the top of this README. Across the fleet, nine red runs in ten were a pin one version behind - which the fleet's triage moves within the day - and a reader cannot tell that from a stack that does not boot. The badge now says whether the stack boots. The job itself is unchanged.
 
 ## [1.8.4] - 2026-09-21
