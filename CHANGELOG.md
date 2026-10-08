@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.9.3] - 2026-10-08
+
 ### Security
 
 - **`postgres:16` was rebuilt upstream**; the pin moved from `sha256:65b16a8b326e…` to `sha256:ca0bd484cb98…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -259,7 +263,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.2...HEAD
+[Unreleased]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.3...HEAD
+[1.9.3]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.8.6...v1.9.0
