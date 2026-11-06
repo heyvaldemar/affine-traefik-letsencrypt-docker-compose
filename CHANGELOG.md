@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.9.14] - 2026-11-06
+
 ### Security
 
 - **`redis:7.4` was rebuilt upstream**; the pin moved from `sha256:b6b6e3dc0c09…` to `sha256:2e3eb11462c4…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -335,7 +339,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.13...HEAD
+[Unreleased]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.14...HEAD
+[1.9.14]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.13...v1.9.14
 [1.9.13]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.12...v1.9.13
 [1.9.12]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.11...v1.9.12
 [1.9.11]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.10...v1.9.11
