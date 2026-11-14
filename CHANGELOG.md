@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.9.20] - 2026-11-14
+
 ### Security
 
 - **The Redis health check put the password on a command line and was green with any password.** It ran `redis-cli -a "$AFFINE_REDIS_PASSWORD" ping`: compose wrote the password into the check's arguments, so the host's `ps` showed it every ten seconds, and `redis-cli ping` exits 0 on an error reply, so the check would have passed with a wrong one (WRONGPASS, measured on redis 7.4.11). It now takes the password from `REDISCLI_AUTH` and passes only on PONG. CI plants a wrong password and waits for Docker to mark Redis unhealthy, and watches every process's command line for the password through the whole run.
@@ -376,7 +380,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.19...HEAD
+[Unreleased]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.20...HEAD
+[1.9.20]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.19...v1.9.20
 [1.9.19]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.18...v1.9.19
 [1.9.18]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.17...v1.9.18
 [1.9.17]: https://github.com/heyvaldemar/affine-traefik-letsencrypt-docker-compose/compare/v1.9.16...v1.9.17
